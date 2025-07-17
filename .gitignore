@@ -1,0 +1,64 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+*.pdm.toml
+*.env
+*.venv/
+*.egg-info/
+*.log
+.env
+venv/
+env/
+*.sqlite3
+
+# VSCode
+.vscode/
+
+# Django stuff:
+db.sqlite3
+media/
+staticfiles/
+static/
+
+# Django migrations
+*/migrations/__pycache__/
+*/migrations/*.py[cod]
+
+# Docker
+*.pid
+*.tar
+*.bak
+*.swp
+docker-compose.override.yml
+*.log
+
+# OS-specific
+.DS_Store
+Thumbs.db
+
+# IDEs
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# pytest cache
+.pytest_cache/
+
+# mypy
+.mypy_cache/
+
+# coverage reports
+htmlcov/
+.coverage
+coverage.xml
+
+# build artifacts
+build/
+dist/
+*.egg
+
+# local settings (optional, if used)
+local_settings.py
