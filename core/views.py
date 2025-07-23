@@ -1,15 +1,19 @@
 from .serializers import UserSignupSerializer
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 from rest_framework import status
+from rest_framework.exceptions import NotFound
 from django.contrib.auth import authenticate
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import TokenError
 from datetime import datetime,timedelta
 from django.contrib.auth.models import User
+from rest_framework.permissions import AllowAny
 # Create your views here.
 
 class UserSignupView(APIView):
+    permission_classes =  [AllowAny]
     def post(self, request):
         serializer = UserSignupSerializer(data=request.data)
         if serializer.is_valid():
@@ -18,6 +22,7 @@ class UserSignupView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
 class UserLoginView(APIView):
+    permission_classes = [AllowAny]
     def post(self,request):
         username = request.data.get('username')
         password  = request.data.get('password')
@@ -32,7 +37,7 @@ class UserLoginView(APIView):
             response = Response({
                 "message": "Login successful",
                 "user":{
-                    id:user.id,
+                    "id":user.id,
                     "username":user.username,
                     "email":user.email
                 }
@@ -44,8 +49,8 @@ class UserLoginView(APIView):
                 value=access_token,
                 httponly=True,
                 expires=expires,
-                samesite='Lax',
-                secure=False  # Set True in production with HTTPS
+                samesite='None',
+                secure=True  # Set True in production with HTTPS
             )
 
 
@@ -54,8 +59,8 @@ class UserLoginView(APIView):
                 value=str(refresh),
                 httponly=True,
                 expires=datetime.utcnow() + timedelta(days=1),
-                samesite='Lax',
-                secure=False
+                samesite='None',
+                secure=True
             )
 
             return response
@@ -65,24 +70,25 @@ class UserLoginView(APIView):
                 status=status.HTTP_401_UNAUTHORIZED
             )
 
-class Refreshtoken(APIView):
+class UserRefreshtoken(APIView):
+    permission_classes = [AllowAny]
     def post(self,request):
-        refresh_token = request.cookies.get('refresh_token')
+        refresh_token = request.COOKIES.get('refresh_token')
         if not refresh_token:
             return Response({
                 "error":"Refresh Token not found"
             })
         try:
             refresh = RefreshToken(refresh_token)
-            payload = request.payload
-            user_id = payload.get('user_id')
+            user_id = refresh.payload.get('user_id')
+            
 
             if not user_id:
                 return Response({
                     "error":"Invalid Token payload"
                 },status=status.HTTP_401_UNAUTHORIZED)
             try:
-                user = User.object.get(id=user_id)
+                user = User.objects.get(id=user_id)
             except:
                 raise NotFound("user not found")
 
@@ -95,7 +101,7 @@ class Refreshtoken(APIView):
                 "user_id":user.id,
                 "user_name" :user.username,
                 "email":user.email
-            },status=status.HTTP_200_SUCCESS)
+            },status=status.HTTP_200_OK)
             response.set_cookie(
                 key="access_token",
                 value=access,
@@ -120,3 +126,16 @@ class Refreshtoken(APIView):
 
 
 
+class UserLogout(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        response = Response({
+            "message": "Successfully logged out"
+        }, status=status.HTTP_200_OK)
+
+        
+        response.delete_cookie('access_token')
+        response.delete_cookie('refresh_token')
+
+        return response
