@@ -13,21 +13,13 @@ from .models import Room
 
 class ChatRooms(APIView):
     permission_classes = [IsAuthenticated]
-    def post(self,request,*args,**kwargs):
-        room_name  = request.data.get('room_name')
-        room_type = request.data.get('room_type','chat')
-        created_by = request.user
 
-        if not room_name:
-            return Response({"error":"Room name is required"},status=status.HTTP_400_BAD_REQUEST)
-
-        room  = Room.objects.create(
-            name=room_name,
-            created_by= created_by,
-            room_type = room_type
-        )
-        serializer = RoomSerializer(room)
-        return Response(serializer.data,status=status.HTTP_201_CREATED)
+    def post(self, request, *args, **kwargs):
+        serializer = RoomSerializer(data=request.data, context={'request': request})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
 
 
