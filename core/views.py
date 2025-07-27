@@ -32,7 +32,7 @@ class UserLoginView(APIView):
             refresh = RefreshToken.for_user(user)
             access_token =  str(refresh.access_token)
 
-            expires = datetime.utcnow() + timedelta(minutes=5)
+            expires = datetime.utcnow() + timedelta(minutes=15)
 
             response = Response({
                 "message": "Login successful",
@@ -71,58 +71,59 @@ class UserLoginView(APIView):
             )
 
 class UserRefreshtoken(APIView):
-    permission_classes = [IsAuthenticated]
-    def post(self,request):
+    authentication_classes = [] 
+    permission_classes = [AllowAny]  # Allow this for unauthenticated users
+
+    def post(self, request):
         refresh_token = request.COOKIES.get('refresh_token')
         if not refresh_token:
-            return Response({
-                "error":"Refresh Token not found"
-            })
+            return Response({"error": "Refresh token not found."}, status=status.HTTP_401_UNAUTHORIZED)
+
         try:
             refresh = RefreshToken(refresh_token)
-            user_id = refresh.payload.get('user_id')
-            
-
-            if not user_id:
-                return Response({
-                    "error":"Invalid Token payload"
-                },status=status.HTTP_401_UNAUTHORIZED)
-            try:
-                user = User.objects.get(id=user_id)
-            except:
-                raise NotFound("user not found")
-
-            access = refresh.access_token
-
-            expires = datetime.utcnow() + timedelta(hours=2)
-
-            response = Response({
-                "message":"Refresh Token Updated",
-                "user_id":user.id,
-                "user_name" :user.username,
-                "email":user.email
-            },status=status.HTTP_200_OK)
-            response.set_cookie(
-                key="access_token",
-                value=access,
-                httponly=True,
-                expires=expires,
-                samesite='Lax',
-                secure=False 
-            )
-
-
-            response.set_cookie(
-                key="refresh_token",
-                value=str(refresh),
-                httponly=True,
-                expires=datetime.utcnow() + timedelta(days=1),
-                samesite='Lax',
-                secure=False
-            )
-            return response
-        except TokenError:
+        except TokenError as e:
+            print("TokenError:", str(e))
             return Response({"error": "Invalid refresh token."}, status=status.HTTP_401_UNAUTHORIZED)
+
+        user_id = refresh.payload.get('user_id')
+        if not user_id:
+            return Response({"error": "Invalid token payload."}, status=status.HTTP_401_UNAUTHORIZED)
+
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        access_token = refresh.access_token
+        expires = datetime.utcnow() + timedelta(hours=2)
+
+        response = Response({
+            "message": "Token refreshed successfully",
+            "user_id": user.id,
+            "user_name": user.username,
+            "email": user.email
+        })
+
+        response.set_cookie(
+            key="access_token",
+            value=str(access_token),
+            httponly=True,
+            expires=expires,
+            samesite='None',
+            secure=True
+        )
+
+        
+        response.set_cookie(
+            key="refresh_token",
+            value=str(refresh_token),
+            httponly=True,
+            expires=datetime.utcnow() + timedelta(days=1),
+            samesite='None',
+            secure=True
+        )
+
+        return response
 
 
 
